@@ -1,0 +1,209 @@
+/*
+-----------------A0,A1 for vehicle A
+BUTTON_PINA0 - 2 
+BUTTON_PINA1 - 3 
+myservo1 << Pin - 7 << for vehicle A
+-----------------B0,B1 for vehicle B
+BUTTON_PINB0 - 4 
+BUTTON_PINB1 - 5 
+myservo2 << Pin - 8 << for vehicle B
+-----------------Both
+Buzzer   << Pin - 11
+BuzzerON << Pin - 10
+Signal   << Pin - 9
+Can be monitor using Serial Monitor
+
+Code by Samsil Arefin  
+*/
+// constants won't change. They're used here to set pin numbers:
+#include <Servo.h>
+Servo myservo1;  
+Servo myservo2;  
+
+const int BUTTON_PINA0 = 2; // the number of the pushbutton pin
+const int BUTTON_PINA1 = 3; // the number of the pushbutton pin
+const int BUTTON_PINB0 = 4; // the number of the pushbutton pin
+const int BUTTON_PINB1 = 5; // the number of the pushbutton pin
+int buzzerBeep = 20;   //Number of warning beep 
+int CountTime  = 5000;// Edit the number according to the required delay need to sense the illigel parking (Milliseconds)
+const int LONG_PRESS_TIMEA0  = CountTime;
+const int LONG_PRESS_TIMEA1  = CountTime;
+const int LONG_PRESS_TIMEB0  = CountTime; 
+const int LONG_PRESS_TIMEB1  = CountTime; 
+
+// Variables will change:
+int lastStateA0 = LOW;  // the previous state from the input pin
+int currentStateA0;     // the current reading from the input pin
+unsigned long pressedTimeA0  = 0;
+bool isPressingA0 = false;
+bool isLongDetectedA0 = false;
+//---------------------------
+int lastStateA1 = LOW;  // the previous state from the input pin
+int currentStateA1;     // the current reading from the input pin
+unsigned long pressedTimeA1  = 0;
+bool isPressingA1 = false;
+bool isLongDetectedA1 = false;
+//--------------------------
+int lastStateB0 = LOW;  // the previous state from the input pin
+int currentStateB0;     // the current reading from the input pin
+unsigned long pressedTimeB0  = 0;
+bool isPressingB0 = false;
+bool isLongDetectedB0 = false;
+//---------------------------
+int lastStateB1 = LOW;  // the previous state from the input pin
+int currentStateB1;     // the current reading from the input pin
+unsigned long pressedTimeB1  = 0;
+bool isPressingB1 = false;
+bool isLongDetectedB1 = false;
+//---------------------------
+int sig=9;// Signal for esp32
+int led;
+int buzzerOn=12;// Contineous Buzzer
+int buzzer=11;// Buzzer
+
+
+void setup() {
+  Serial.begin(9600);
+   myservo1.attach(8); 
+   myservo2.attach(7); 
+   myservo1.write(90);
+   myservo2.write(90);
+  pinMode(BUTTON_PINA0, INPUT_PULLUP);
+  pinMode(BUTTON_PINA1, INPUT_PULLUP);
+  pinMode(BUTTON_PINB0, INPUT_PULLUP);
+  pinMode(BUTTON_PINB1, INPUT_PULLUP);
+  pinMode(sig, OUTPUT);
+  pinMode(led, OUTPUT);
+  pinMode(buzzer, OUTPUT);
+  pinMode(buzzerOn, OUTPUT);
+  
+}
+
+void loop() {
+  digitalWrite (sig,HIGH);
+  myservo1.write(50);
+  myservo2.write(50);
+  // read the state of the switch/button:
+  currentStateA0 = digitalRead(BUTTON_PINA0);
+  currentStateA1 = digitalRead(BUTTON_PINA1);
+  currentStateB0 = digitalRead(BUTTON_PINB0);
+  currentStateB1 = digitalRead(BUTTON_PINB1);
+  
+  //---------------------------
+
+  if(lastStateA0 == HIGH && currentStateA0 == LOW) {        // button is pressed
+    pressedTimeA0 = millis();
+    isPressingA0 = true;
+    isLongDetectedA0 = false;
+  }
+  else if(lastStateA0 == LOW && currentStateA0 == HIGH) { // button is released
+    isPressingA0 = false;
+  }
+  //-------------------------------
+    if(lastStateA1 == HIGH && currentStateA1 == LOW) {        // button is pressed
+    pressedTimeA1 = millis();
+    isPressingA1 = true;
+    isLongDetectedA1 = false;
+  }
+  else if(lastStateA1 == LOW && currentStateA1 == HIGH) { // button is released
+    isPressingA1 = false;
+  }
+
+  if(isPressingA0 == true && isLongDetectedA0 == false) {
+    if(isPressingA1 == true && isLongDetectedA1 == false) {
+    long pressDurationA0 = millis() - pressedTimeA0;
+    long pressDurationA1 = millis() - pressedTimeA1;
+
+    if(( pressDurationA0 > LONG_PRESS_TIMEA0 )&&( pressDurationA1 > LONG_PRESS_TIMEA1)) {
+      Serial.println("Vehicle detected at A");
+      delay(500); 
+      
+      for (int i=1; i<=buzzerBeep; i++){
+          digitalWrite(buzzer, HIGH);//Buzzer will remain HIGH until reset pulse from 
+          delay(250);
+          digitalWrite(buzzer, LOW);//Buzzer will remain HIGH until reset pulse from
+          delay(250);
+          Serial.println(i);
+         
+          }
+           if ((digitalRead (BUTTON_PINA0) == LOW)&&(digitalRead (BUTTON_PINA1) == LOW)){
+              myservo1.write(0);
+              delay(500);
+              myservo1.write(50);
+              delay(500);
+              digitalWrite(sig, LOW);   // turn the sig HIGH for esp32
+              delay(5000);
+              digitalWrite(buzzerOn, HIGH);   // 
+              delay(5000);
+              digitalWrite(buzzerOn, LOW); 
+ 
+          }
+      
+      isLongDetectedA0 = true;
+      isLongDetectedA1 = true;
+      }
+    }
+  }
+
+  // save the the last state
+  lastStateA0 = currentStateA0;
+  lastStateA1 = currentStateA1;
+  //----------------------------------------------------------------------------------------------------
+   if(lastStateB0 == HIGH && currentStateB0 == LOW) {        // button is pressed
+    pressedTimeB0 = millis();
+    isPressingB0 = true;
+    isLongDetectedB0 = false;
+  }
+  else if(lastStateB0 == LOW && currentStateB0 == HIGH) { // button is released
+    isPressingB0 = false;
+  }
+  //-------------------------------
+    if(lastStateB1 == HIGH && currentStateB1 == LOW) {        // button is pressed
+    pressedTimeB1 = millis();
+    isPressingB1 = true;
+    isLongDetectedB1 = false;
+  }
+  else if(lastStateB1 == LOW && currentStateB1 == HIGH) { // button is released
+    isPressingB1 = false;
+  }
+
+  if(isPressingB0 == true && isLongDetectedB0 == false) {
+    if(isPressingB1 == true && isLongDetectedB1 == false) {
+    long pressDurationB0 = millis() - pressedTimeB0;
+    long pressDurationB1 = millis() - pressedTimeB1;
+
+    if(( pressDurationB0 > LONG_PRESS_TIMEB0 )&&( pressDurationB1 > LONG_PRESS_TIMEB1)) {
+      Serial.println("Vehicle detected at B");
+      delay(500); 
+      
+      for (int i=1; i<=buzzerBeep; i++){
+          digitalWrite(buzzer, HIGH);//Buzzer will remain HIGH until reset pulse from 
+          delay(250);
+          digitalWrite(buzzer, LOW);//Buzzer will remain HIGH until reset pulse from
+          delay(250);
+          Serial.println(i);
+           
+          }
+          if ((digitalRead (BUTTON_PINB0) == LOW)&&(digitalRead (BUTTON_PINB1) == LOW)){
+              myservo2.write(0);
+              delay(500);
+              myservo2.write(50);
+              delay(500);
+              digitalWrite(sig, LOW);   // turn the sig HIGH for esp32
+              delay(5000);
+              digitalWrite(buzzerOn, HIGH);   // 
+              delay(5000);
+              digitalWrite(buzzerOn, LOW); 
+              
+          }
+        
+      isLongDetectedB0 = true;
+      isLongDetectedB1 = true;
+      }
+    }
+  }
+
+  // save the the last state
+  lastStateB0 = currentStateB0;
+  lastStateB1 = currentStateB1;
+}
